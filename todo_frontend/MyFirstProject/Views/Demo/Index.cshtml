@@ -1,0 +1,31 @@
+﻿
+@{
+    ViewBag.Title = "Index";
+    Layout = null;
+}
+
+<h2>Index</h2>
+
+<label for="txtnum1">Enter Number 1</label>
+<input type="text" id="txtnum1" placeholder="Number 1" />
+<br />
+<label for=" txtnum2">Enter Number 2</label>
+<input type="text" id="txtnum2" placeholder="Number 2" />
+<br />
+<button id="btnAdd"> Add the Numbers!</button>
+<br />
+<label for="txtres">Result</label>
+<input type="text" id="txtres" placeholder="Result" />
+<br />
+<script src="~/Scripts/jquery-3.4.1.js"></script>
+<script>
+    $(document).ready(function () {
+        $("#btnAdd").click(function () {
+            var num1 = parseInt($('#txtnum1').val());
+            var num2 = parseInt($('#txtnum2').val());
+            var sum = num1 + num2;
+            $('#txtres').val(sum);
+        })
+    })
+</script>
+

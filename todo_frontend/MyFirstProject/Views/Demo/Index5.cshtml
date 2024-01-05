@@ -1,0 +1,198 @@
+﻿
+@{
+    ViewBag.Title = "Index5";
+    Layout = null;
+}
+
+<h2>Student Data CRUD</h2>
+
+<form id="addStudentForm">
+    <label for="roll">Roll no:</label>
+    <input type="number" id="txtroll" name="roll" required /><br>
+
+    <label for="name">Name:</label>
+    <input type="text" id="txtname" name="name" required /><br>
+
+    <label for="age">Age:</label>
+    <input type="number" id="txtage" name="age" required /><br>
+
+    <input type="button" name="btnAddStudent" id="btnAddStudent" value="Add Student" />
+</form>
+
+<input type="button" name="btnLoadData" id="btnLoadData" value="View Student List" />
+<div id="divStud"></div>
+
+<!-- Modal for Editing -->
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Edit Student</h3>
+        <form id="editStudentForm">
+            <!-- Add a hidden input field to store the roll number -->
+            <input type="hidden" id="editRoll" name="editRoll" />
+
+            <label for="editName">Name:</label>
+            <input type="text" id="editName" name="editName" required /><br>
+
+            <label for="editAge">Age:</label>
+            <input type="text" id="editAge" name="editAge" required /><br>
+
+            <input type="button" name="btnUpdateStudent" id="btnUpdateStudent" value="Update" />
+        </form>
+    </div>
+</div>
+
+<script src="~/Scripts/jquery-3.4.1.js"></script>
+<script>
+    $(document).ready(function () {
+
+        var studata;
+
+        //Render data function
+        var RenderStudentData = function (data) {
+            studata = data;
+            var html = '<table border="1"><thead><tr><th>Roll</th><th>Name</th><th>Age</th><th>Action</th></tr></thead><tbody>';
+            studata.forEach(function (student) {
+                html += '<tr>';
+                html += '<td>' + student.roll + '</td>';
+                html += '<td>' + student.name + '</td>';
+                html += '<td>' + student.age + '</td>';
+                html += '<td><button class="btnEdit" data-roll="' + student.roll + '">Edit</button> | <button class="btnDelete" data-roll="' + student.roll + '">Delete</button></td>';
+                html += '</tr>';
+            });
+            html += '</tbody></table>';
+            $('#divStud').html(html);
+        };
+
+        // Add button click event
+        $('#btnAddStudent').click(function () {
+            var roll = $('#txtroll').val();
+            var name = $('#txtname').val();
+            var age = $('#txtage').val();
+
+            // Check if any field is empty
+            if (roll === '' || name === '' || age === '') {
+                alert('Please fill in all fields before adding a student.');
+                return;
+            }
+
+            var studentData = {
+                "roll": roll,
+                "name": name,
+                "age": age
+            };
+
+            $.ajax({
+                url: '/Demo/SaveStudent',
+                method: 'POST',
+                data: studentData,
+                success: function (data) {
+                    console.log(data);
+                    RenderStudentData(data);
+                    // Clear the form after a successful Ajax call
+                    $('#addStudentForm')[0].reset();
+                }
+            });
+        });
+
+        // Read button click event
+        $('#btnLoadData').click(function () {
+            $.ajax({
+                url: '/Demo/GetStudentList',
+                method: 'POST',
+                success: function (data) {
+                    console.log(data);
+                    RenderStudentData(data);
+                }
+            });
+        });
+
+        @*// Edit button click event
+        $(document).on('click', '.btnEdit', function () {
+            var roll = $(this).data('roll');
+
+            // Retrieve the student details for editing
+            var studentToEdit = {
+                "roll": roll,
+                "name": prompt('Enter the new name:', ''),
+                "age": parseInt(prompt('Enter the new age:', ''), 10)
+            };
+
+            // Make an Ajax call to update the student data
+            $.ajax({
+                url: '/Demo/UpdateStudent',
+                method: 'POST',
+                data: JSON.stringify(studentToEdit),
+                contentType: 'application/json',
+                success: function (data) {
+                    RenderStudentData(data);
+                }
+            });
+        });*@
+
+        // Edit button click event
+        $(document).on('click', '.btnEdit', function () {
+            var roll = $(this).data('roll');
+
+            // Find the student data for the selected roll
+            var studentToEdit = studata.find(function (student) {
+                return student.roll === roll;
+            });
+
+            // Populate the form fields with the current data
+            $('#editRoll').val(roll); // hidden field
+            $('#editName').val(studentToEdit.name);
+            $('#editAge').val(studentToEdit.age);
+
+            // Show the edit modal
+            $('#editModal').css('display', 'block');
+        });
+
+        // Close the modal when the close button is clicked
+        $('.close').click(function () {
+            $('#editModal').css('display', 'none');
+        });
+
+        // Update button click event
+        $(document).on('click', '#btnUpdateStudent', function () {
+            var updatedStudent = {
+                roll: $('#editRoll').val(),
+                name: $('#editName').val(),
+                age: parseInt($('#editAge').val(), 10)
+            };
+
+            console.log(updatedStudent);
+
+            // Make an Ajax call to update the student data
+            $.ajax({
+                url: '/Demo/UpdateStudent',
+                method: 'POST',
+                data: JSON.stringify(updatedStudent),
+                contentType: 'application/json',
+                success: function (data) {
+                    RenderStudentData(data);
+                    $('#editModal').css('display', 'none');
+                }
+            });
+        });
+
+        // Delete button click event
+        $(document).on('click', '.btnDelete', function () {
+            var roll = $(this).data('roll');
+
+            // Confirm if the user really wants to delete the student
+            if (confirm('Are you sure you want to delete student with roll no.' + roll + '?')) {
+                // Make an Ajax call to delete the student
+                $.ajax({
+                    url: '/Demo/DeleteStudent',
+                    method: 'POST',
+                    data: { roll: roll },
+                    success: function (data) {
+                        RenderStudentData(data);
+                    }
+                });
+            }
+        });
+
+    });
+</script>

@@ -1,0 +1,270 @@
+﻿@{
+    ViewBag.Title = "ToDoMain";
+    Layout = null;
+}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do List App</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/css/bootstrap.min.css">
+    <style>
+        body {
+            padding: 20px;
+            font-size: 16px;
+            background-color: #f0f0f0;
+        }
+
+        .container {
+            background-color: #ffffff;
+            padding: 30px;
+            margin-bottom: 20px;
+            border-radius: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .task-list {
+            margin-top: 20px;
+        }
+
+        .task-item {
+            margin-bottom: 10px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            background-color: #fff;
+        }
+
+        .btn {
+            border-radius: 20px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2 id="welcomeMessage">Welcome to the To-Do List App</h2>
+        <form id="taskForm">
+            <div class="form-group">
+                <label for="title">Title:</label>
+                <input type="text" class="form-control" id="title" required>
+            </div>
+            <div class="form-group">
+                <label for="description">Description:</label>
+                <textarea class="form-control" id="description" rows="2"></textarea>
+            </div>
+            <div class="form-group">
+                <label for="dueDate">Due By:</label>
+                <input type="date" onkeydown="return false" class="form-control" id="dueDate" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Task</button>
+        </form>
+    </div>
+
+    <div class="container">
+        <div class="task-list">
+            <h3>Task List</h3>
+            <ul id="tasks" class="list-group">
+                <!-- Task items will be dynamically added here -->
+            </ul>
+        </div>
+    </div>
+
+    <!-- Update Task Modal -->
+    <div class="modal fade" id="updateTaskModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                    <h4 class="modal-title" id="updateTaskModalLabel">Update Task</h4>
+                </div>
+                <div class="modal-body">
+                    <form id="updateTaskForm">
+                        <div class="form-group">
+                            <label for="updateTitle">Title:</label>
+                            <input type="text" class="form-control" id="updateTitle" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="updateDescription">Description:</label>
+                            <textarea class="form-control" id="updateDescription" rows="2"></textarea>
+                        </div>
+                        <div class="form-group">
+                            <label for="updateDueDate">Due By:</label>
+                            <input type="date" onkeydown="return false" class="form-control" id="updateDueDate" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.1/js/bootstrap.min.js"></script>
+    <script>
+        // Get the username from local storage
+        var username = localStorage.getItem('username');
+
+        // Update the welcome message
+        if (username) {
+            $("#welcomeMessage").text("Welcome, " + username + " to the To-Do List app");
+        }
+        $(document).ready(function () {
+            // Function to get JWT token from local storage
+            function getJwtToken() {
+                return localStorage.getItem('accessToken');
+            }
+
+            // Function to set headers with JWT token
+            function getHeaders() {
+                return { 'Authorization': getJwtToken() };
+            }
+
+            function renderTask(task) {
+                var dueDate = new Date(task.dueDate).toISOString().split('T')[0];
+
+                var taskItem = $(
+                    "<li class='list-group-item task-item' data-id='" + task._id + "' data-title='" + task.title + "' data-description='" + task.description + "' data-duedate='" + dueDate + "'>" +
+                    "<span><strong>Title:</strong> " + task.title + "</span><br>" +
+                    "<span><strong>Description:</strong> " + task.description + "</span><br>" +
+                    "<span><strong>Due by:</strong>" + dueDate + "</span>" +
+                    "<button class='btn btn-danger btn-s pull-right delete-btn' >Delete</button>" +
+                    "<button class='btn btn-warning btn-s pull-right update-btn' style='margin-right: 5px;' data-toggle='modal' data-target='#updateTaskModal'>Update</button>" +
+                    "</li>"
+                );
+
+                $("#tasks").append(taskItem);
+            }
+
+            function fetchAndRenderTasks() {
+                $.ajax({
+                    url: 'http://localhost:5000/api/tasks',
+                    method: 'GET',
+                    headers: getHeaders(),
+                    success: function (data) {
+                        $("#tasks").empty();
+                        data.forEach(function (task) {
+                            renderTask(task);
+                        });
+                    },
+                    error: function (error) {
+                        console.error(error);
+                    }
+                });
+            }
+
+            fetchAndRenderTasks();
+
+            $("#taskForm").submit(function (event) {
+                event.preventDefault();
+
+                var title = $("#title").val();
+                var description = $("#description").val();
+                var dueDate = $("#dueDate").val();
+
+                var currentDate = new Date().toISOString().split('T')[0];
+                if (dueDate < currentDate) {
+                    alert("Due date must be equal or greater than the current date.");
+                    return;
+                }
+
+                $.ajax({
+                    url: 'http://localhost:5000/api/tasks',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ title: title, description: description, dueDate: dueDate }),
+                    headers: getHeaders(),
+                    success: function (data) {
+                        renderTask(data);
+                        $("#taskForm")[0].reset();
+                    },
+                    error: function (error) {
+                        console.error(error);
+                    }
+                });
+            });
+
+            $("#tasks").on("click", ".delete-btn", function () {
+                var taskItem = $(this).closest(".task-item");
+
+                var taskId = taskItem.data("id");
+
+                $.ajax({
+                    url: 'http://localhost:5000/api/tasks/' + taskId,
+                    method: 'DELETE',
+                    headers: getHeaders(),
+                    success: function () {
+                        taskItem.remove();
+                    },
+                    error: function (error) {
+                        console.error(error);
+                    }
+                });
+            });
+
+            $("#tasks").on("click", ".update-btn", function () {
+                var taskItem = $(this).closest(".task-item");
+
+                var title = taskItem.attr("data-title");
+                var description = taskItem.attr("data-description");
+                var dueDate = taskItem.attr("data-duedate");
+
+                $("#updateTitle").val(title);
+                $("#updateDescription").val(description);
+                $("#updateDueDate").val(dueDate);
+
+                $("#updateTaskModal").data("taskItem", taskItem);
+            });
+
+            $("#updateTaskForm").submit(function (event) {
+                event.preventDefault();
+
+                var updatedTitle = $("#updateTitle").val();
+                var updatedDescription = $("#updateDescription").val();
+                var updatedDueDate = $("#updateDueDate").val();
+
+                var currentDate = new Date().toISOString().split('T')[0];
+                if (updatedDueDate < currentDate) {
+                    alert("Due date must be equal or greater than the current date.");
+                    return;
+                }
+
+                var taskItem = $("#updateTaskModal").data("taskItem");
+                var taskId = taskItem.data("id");
+
+                $.ajax({
+                    url: 'http://localhost:5000/api/tasks/' + taskId,
+                    method: 'PUT',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ title: updatedTitle, description: updatedDescription, dueDate: updatedDueDate }),
+                    headers: getHeaders(),
+                    success: function () {
+                        taskItem.attr("data-title", updatedTitle);
+                        taskItem.attr("data-description", updatedDescription);
+                        taskItem.attr("data-duedate", updatedDueDate);
+
+                        taskItem.html("<strong>Title:</strong> " + updatedTitle + "<br>" +
+                            "<strong>Description:</strong> " + updatedDescription + "<br>" +
+                            "<strong>Due By:</strong> " + updatedDueDate +
+                            "<button class='btn btn-danger btn-s pull-right delete-btn' >Delete</button>" +
+                            "<button class='btn btn-warning btn-s pull-right update-btn' style='margin-right: 5px;' data-toggle='modal' data-target='#updateTaskModal'>Update</button>");
+
+                        $("#updateTaskModal").modal("hide");
+                        $("#updateTaskForm")[0].reset();
+                    },
+                    error: function (error) {
+                        console.error(error);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>
